@@ -1,1 +1,10 @@
 user.R
+*.pdf
+*.tex
+*.out
+*.blg
+*.bbl
+*.run.xml
+*.aux
+*-blx.*
+*.log
