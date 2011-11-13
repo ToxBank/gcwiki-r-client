@@ -1,0 +1,305 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[OT1]{fontenc}
+\usepackage{a4wide}
+\usepackage{hyperref}            
+
+% Sweave
+\usepackage{Sweave}
+
+% Biblatex
+\usepackage[style=chem-angew,hyperref,citestyle=numeric-comp,articletitle,sorting=none]{biblatex}
+\setlength{\bibitemsep}{0cm}
+\addbibresource{sparql.bib}
+
+\begin{document}
+
+\section{Introduction}
+
+This document gives an overview of the content of the ToxBank Gold Compound Wiki.
+The first section will introduce how the wiki is accessed, and further section
+will discuss the content of the wiki.
+
+SPARQL is the query language for the Semantic Web. The ToxBank Gold Compound Wiki
+has a SPARQL end point where SPARQL queries can be run. This can be done via
+a wiki page (\url{http://wiki.toxbank.net/w/index.php/Special:SPARQLEndpoint})
+
+\section{Accessing the ToxBank Wiki}
+
+The ToxBank wiki can be accessed from data analysis software via its SPARQL end point.
+For example, the rrdf package for R can be used for this~\cite{rrdf}. After starting
+an R session (from the command line, with RStudio, RStet, Bioclipse, or anything else),
+you can load this library with:
+
+<<>>=
+library(rrdf)
+@
+
+To simplify
+the R code we define a \textit{toxbank} variable for it:
+
+<<>>=
+toxbank = "http://wiki.toxbank.net/w/index.php/Special:SPARQLEndpoint"
+@
+
+Because the wiki is protected with LDAP-based security to limit access only to
+SEURAT-1 participants, we need to authenticate when running a SPARQL query, but
+the \textit{rrdf} recently gained support for that. I syggest to keep the
+user credentials in a separate file, for which you can easily control the
+access on your local machine. For example, you can create a \textit{user.R} that
+looks like:
+
+\begin{verbatim}
+user = "username"
+password = "password"
+\end{verbatim}
+
+This file can then be used in any further script to run some analysis of the
+wiki content, by sourcing it:
+
+<<>>=
+source("user.R")
+@
+
+We can then run SPARQL queries against our wiki with the following code.
+
+<<>>=
+results = sparql.remote(toxbank,
+  user=user, password=password,
+  "SELECT DISTINCT ?predicate { [] ?predicate [] }"
+)
+@
+
+This results matrix returns all unique predicates defined by the wiki
+(currently \Sexpr{print(nrow(results))}).
+
+In the remainder of this document SPARQL queries will be used which I
+will assign to the sparql variable, which is then used in this fashion:
+
+<<>>=
+sparql = "SELECT DISTINCT ?class { [] a ?class }"
+results = sparql.remote(toxbank, sparql,
+  user=user, password=password
+)
+@
+
+The remainder of this document will simply give the SPARQL query, rather
+than the exact R command, but all output is created by running the
+query in R. It should be noted that SPARQL queries can easily copied
+into your R code, including quoted strings, using the following R syntax:
+
+\begin{verbatim}
+sparql = '
+SELECT ?class {
+  ?class ?predicate "D00395" .
+}
+'
+\end{verbatim}
+
+<<echo=F>>=
+sparql = '
+SELECT ?class {
+  ?class ?predicate "D00395" .
+}
+'
+results = sparql.remote(toxbank, sparql, user=user, password=password)
+@
+
+This query would return \textit{troglitazone} which has D00395 as associated
+KEGG identifier. This class has the URI
+\url{\Sexpr{results[1,"class"]}}.
+
+\section{Classes}
+
+The SPARQL query all classes used in wiki can be done with this SPARQL:
+
+\begin{verbatim}
+SELECT DISTINCT ?class { [] a ?class }
+\end{verbatim}
+
+This query makes use of the shortcut 'a', which maps to the type predicate
+from RDF (\textit{rdf:type}).
+
+This will return these classes:
+
+\begin{scriptsize}
+<<echo=F>>=
+sparql = '
+SELECT DISTINCT ?class { [] a ?class }
+'
+sparql.remote(
+  toxbank, sparql,
+  user=user,password=password
+)
+@
+\end{scriptsize}
+
+And we here see a typical feature of the Semantic MediaWiki (SMW): if a page is
+categorized into a particular \textit{Category}, the SMW will automatically
+make the topic of that wiki page of \textit{rdf:type} of that category.
+
+We can make use of this to ask for all substances associated with hepatotoxicity.
+
+\subsection*{Substances}
+
+To list all substances the wiki associates with hepatotoxicity, we just query
+for all page topics of type \url{http://wiki.toxbank.net/w/index.php/Special:URIResolver/Category-3AHepatotoxicCompounds}.
+To do this, we will use another SPARQL trick: prefixes. Prefixes allow us to simplify the
+query, to make it easier to read for use mere humans:
+
+\begin{verbatim}
+PREFIX cat: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/Category-3A>
+PREFIX wiki: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?substance ?name WHERE {
+  ?substance a cat:HepatotoxicCompounds ;
+    rdfs:label ?name .
+}
+\end{verbatim}
+
+This will return to R this matrix:
+
+\begin{scriptsize}
+<<echo=F>>=
+sparql = '
+PREFIX cat: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/Category-3A>
+PREFIX wiki: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?substance ?name WHERE {
+  ?substance a cat:HepatotoxicCompounds ;
+    rdfs:label ?name .
+}
+'
+sparql.remote(
+  toxbank, sparql,
+  user=user,password=password
+)
+@
+\end{scriptsize}
+
+Furthermore, for any compound we can then list all properties with this SPARQL:
+
+\begin{verbatim}
+PREFIX cat: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/Category-3A>
+PREFIX wiki: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/>
+PREFIX prop: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/Property-3A>
+
+SELECT ?predicate ?value WHERE {
+  wiki:Acetaminophen ?predicate ?value .
+}
+\end{verbatim}
+
+This will return to R this matrix:
+
+\begin{scriptsize}
+<<echo=F>>=
+sparql = '
+PREFIX cat: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/Category-3A>
+PREFIX wiki: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/>
+PREFIX prop: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/Property-3A>
+
+SELECT ?predicate ?value WHERE {
+  wiki:Acetaminophen ?predicate ?value
+}
+'
+sparql.remote(
+  toxbank, sparql,
+  user=user,password=password
+)
+@
+\end{scriptsize}
+
+
+\section{Predicates}
+
+With the basic tools in place, we can start analyzing the content of the wiki.
+We can list all predicates defined in the wiki with the following SPARQL:
+
+\begin{verbatim}
+PREFIX prop: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/Property-3A>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT DISTINCT ?predicate ?name
+WHERE { 
+  [] ?predicate [] .
+  ?predicate rdfs:label ?name .
+  FILTER regex(?predicate, "toxbank")
+}
+\end{verbatim}
+
+This returns:
+
+\begin{scriptsize}
+<<echo=F>>=
+sparql = '
+PREFIX prop: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/Property-3A>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT DISTINCT ?predicate ?name
+WHERE { 
+  [] ?predicate [] .
+  ?predicate rdfs:label ?name .
+  FILTER regex(?predicate, "toxbank")
+}
+'
+sparql.remote(
+  toxbank, sparql,
+  user=user,password=password
+)
+@
+\end{scriptsize}
+
+Now, this SPARQL actually asked for all predicates which had 'toxbank' in the URI,
+and it is therefore surprising to see the FOAF predicates \textit{foaf:homepage}
+and \textit{foaf:weblog} show up. This is because the ToxBank predicates
+\url{http://wiki.toxbank.net/w/index.php/Property:Has_Webpage} and 
+\url{http://wiki.toxbank.net/w/index.php/Property:Has_Weblog} are made
+synonymous to the FOAF equivalents.
+
+\section{Chemical properties}
+
+OK, now that we covered the basics, we can start analyzing the data in the wiki.
+Let's plot the pKa values for the all Gold Compounds (accepted, rejected,
+and proposed). We use this query to retrieve the data:
+
+\begin{verbatim}
+PREFIX prop: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/Property-3A>
+
+SELECT ?pka WHERE {
+  ?substance prop:Has_pKa ?pka
+}
+\end{verbatim}
+
+and make a histogram of the values in the wiki:
+
+<<echo=F>>=
+sparql = '
+PREFIX prop: <http://wiki.toxbank.net/w/index.php/Special:URIResolver/Property-3A>
+
+SELECT ?pka WHERE {
+  ?substance prop:Has_pKa ?pka
+}
+'
+@
+
+<<label=histpkas,fig=TRUE,include=FALSE>>=
+pkas = as.numeric(sparql.remote(toxbank, sparql, user=user,password=password))
+hist(pkas, main="", xlab="pKa", breaks=5)
+@
+
+The results are shown in Figure~\ref{fig:pkas}.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=3in]{sparql-histpkas}
+\end{center}
+\caption{Distribution of pKa values of all gold compounds.}
+\label{fig:pkas}
+\end{figure}
+
+\printbibliography
+
+\end{document}
