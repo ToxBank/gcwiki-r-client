@@ -11,7 +11,17 @@
 \setlength{\bibitemsep}{0cm}
 \addbibresource{sparql.bib}
 
+\title{Accessing the ToxBank Gold Compound wiki from R}
+\date{}
+\author{Egon Willighagen\\
+Division of Molecular Toxicology\\
+Institute for Environmental Medicine\\
+Karolinska Institutet}
+
 \begin{document}
+
+\maketitle
+\tableofcontents
 
 \section{Introduction}
 
