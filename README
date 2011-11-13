@@ -3,5 +3,17 @@ from within R. In fact, being a Sweave document, it does not just tell
 you how to do it, it actually does it.
 
 License
+-------
 
 Create Commons Attribution Share-Alike
+
+Installation
+------------
+
+1. install R and the rrdf package from CRAN
+
+  http://cran.r-project.org/web/packages/rrdf/
+
+2. add your wiki account to a file User.R using the matching template
+
+3. run 'make'
