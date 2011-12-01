@@ -16,4 +16,4 @@ sparql-blx.bbl: sparql.aux
 	bibtex sparql
 
 clean:
-	@rm -f *.aux *.log *.bbl *.out *.blog sparql*.tex sparql*.pdf sparql-blx* *.blg
+	@rm -f *.aux *.log *.bbl *.out *.blog sparql*.tex sparql*.pdf sparql-blx* *.blg *.toc *.run.xml Rplots.*
