@@ -4,7 +4,7 @@ all: sparql.pdf
 sparql.tex: sparql.Rnw
 	R CMD Sweave sparql.Rnw
 
-sparql.pdf: sparql.bib sparql.tex
+sparql.pdf: sparql-blx.bbl sparql.bib sparql.tex
 	pdflatex sparql.tex
 	pdflatex sparql.tex
 	pdflatex sparql.tex
